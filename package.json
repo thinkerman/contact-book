@@ -1,0 +1,21 @@
+{
+  "name": "contact-book",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "dev": "nodemon --watch src -e ejs,js src/index.js",
+    "clear": "npm clear cache",
+    "initdb": "node tools/initdb.js"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@hapi/hapi": "^19.2.0",
+    "@hapi/joi": "^17.1.1",
+    "dotenv": "^8.6.0",
+    "pg": "^8.6.0",
+    "postgres": "^1.0.2"
+  }
+}
