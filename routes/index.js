@@ -21,12 +21,7 @@ const dbOperation = async () => {
     try {
         // connect to the local database server
         await client.connect();
-        const res = await client.query('SELECT * FROM contact');
 
-        // get all db rows
-        await res.rows.map(field => {
-            d.push(field)
-        });
 
     } catch (err) {
         console.log(err);
@@ -35,22 +30,61 @@ const dbOperation = async () => {
 
 }
 
-dbOperation()
 
+
+dbOperation();
 const home = {
     method: "GET",
     path: "/",
     handler: (request, h) => {
-        return h.response('<h1>Hello world</h1>');
+        return h.response({
+            routes: {
+                all: 'get all contacts',
+                contact: {
+                    description: 'get all contacts',
+                    params: 'id'
+                },
+                remove: {
+                    description: 'delete single contact',
+                    params: 'id'
+                },
+                add: {
+                    description: 'add new contact',
+                    params: {
+                        fname: 'firstname',
+                        lname: 'last name',
+                        street: 'street address',
+                        p_code: 'postal code',
+                        country: 'country name',
+                        group: ['friend', 'professional', 'family', 'others'],
+                        province: ['AB', 'NL', 'PE', 'NS', 'NB', 'QC', 'ON', 'MN', 'SK', 'BC', 'YT', 'NT', 'NU']
+                    }
+                },
+                search: {
+                    description: 'search contact',
+                    params: 'key'
+                },
+                update: {
+                    description: 'update contact',
+                    params: {
+                        field: 'field to update',
+                        value: 'new field value'
+                    }
+                }
+            }
+
+        });
     }
 };
 
 const all = {
     method: "GET",
     path: "/all",
-    handler: (request, h) => {
+    handler: async (request, h) => {
+        const res = await client.query('SELECT * FROM contact');
 
-        if (d.length <= 0) {
+
+        if (res.length <= 0) {
             const responseObject = {
                 status: 401,
                 rows: 0,
@@ -58,7 +92,7 @@ const all = {
             }
             return h.response(responseObject);
         }
-        return d;
+        return res.rows;
     }
 };
 const add = {
@@ -66,11 +100,14 @@ const add = {
     path: "/add",
     handler: async (request, h) => {
         const params = request.query;
-        const query = "INSERT into contact (fname,lname,email) VALUES ('" + params.fname + "','" + params.lname + "','" + params.email + "','" + params.p_code + "','" + params.province + "','" + params.country + "','" + params.street_address + "','" + params.contact_group + "');";
-        const res = await client.query(query);
-
-
-        return res;
+        try {
+            const query = "INSERT into contact (fname,lname,email,p_code,province,country,street_address,contact_group) VALUES ('" + params.fname + "','" + params.lname + "','" + params.email + "','" + params.p_code + "','" + params.province + "','" + params.country + "','" + params.street_address + "','" + params.contact_group + "');";
+            const res = await client.query(query);
+            return res;
+        } catch (error) {
+            console.log(error)
+            throw error
+        }
     },
     // options: {
     //     validate: {
@@ -124,8 +161,6 @@ const contact = {
         const params = request.query;
         const query = "SELECT * FROM contact WHERE id='" + params.id + "'";
         const res = await client.query(query);
-
-
         if (res.rowCount < 1) {
             return {
                 message: 'No records found',
@@ -134,7 +169,8 @@ const contact = {
         }
 
         return res.rows;
-    }
+    },
+
 };
 
 const search = {
