@@ -4,7 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "jest",
     "dev": "nodemon --watch src -e ejs,js src/index.js",
     "clear": "npm clear cache",
     "initdb": "node tools/initdb.js"
@@ -17,5 +17,8 @@
     "dotenv": "^8.6.0",
     "pg": "^8.6.0",
     "postgres": "^1.0.2"
+  },
+  "devDependencies": {
+    "jest": "^26.6.3"
   }
 }

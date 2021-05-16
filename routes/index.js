@@ -1,8 +1,6 @@
 "use strict";
 const dotenv = require("dotenv");
 const { Client } = require('pg');
-const Joi = require('@hapi/joi');
-const { emptyQuery } = require("pg-protocol/dist/messages");
 
 dotenv.config();
 const client = new Client({
@@ -14,15 +12,11 @@ const client = new Client({
 })
 
 
-let d = [];
-
 const dbOperation = async () => {
 
     try {
         // connect to the local database server
         await client.connect();
-
-
     } catch (err) {
         console.log(err);
         throw err;
@@ -41,7 +35,7 @@ const home = {
             routes: {
                 all: 'get all contacts',
                 contact: {
-                    description: 'get all contacts',
+                    description: 'get single contacts',
                     params: 'id'
                 },
                 remove: {
@@ -62,7 +56,9 @@ const home = {
                 },
                 search: {
                     description: 'search contact',
-                    params: 'key'
+                    params: ['lname', 'fname', 'group'],
+                    note: 'group requires full text'
+
                 },
                 update: {
                     description: 'update contact',
@@ -101,23 +97,31 @@ const add = {
     handler: async (request, h) => {
         const params = request.query;
         try {
-            const query = "INSERT into contact (fname,lname,email,p_code,province,country,street_address,contact_group) VALUES ('" + params.fname + "','" + params.lname + "','" + params.email + "','" + params.p_code + "','" + params.province + "','" + params.country + "','" + params.street_address + "','" + params.contact_group + "');";
+
+            // set default values for fields
+            const contactDetails = {
+                fname: params.fname,
+                lname: params.lname,
+                email: params.email,
+                pcode: params.p_code || '',
+                province: params.province || 'ON',
+                country: params.country || '',
+                street: params.street_address || '',
+                group: params.contact_group || 'others',
+                rowCount: 0
+
+            }
+
+            const query = "INSERT into contact (fname,lname,email,p_code,province,country,street_address,contact_group) VALUES ('" + contactDetails.fname + "','" + contactDetails.lname + "','" + contactDetails.email + "','" + contactDetails.pcode + "','" + contactDetails.province + "','" + contactDetails.country + "','" + contactDetails.street + "','" + contactDetails.group + "');";
             const res = await client.query(query);
-            return res;
+            contactDetails.rowCount = res.rowCount;
+
+            return contactDetails;
         } catch (error) {
             console.log(error)
             throw error
         }
     },
-    // options: {
-    //     validate: {
-    //         payload: Joi.object({
-    //             name: Joi.string().min(1).max(15),
-    //             lname: Joi.string().min(1).max(15),
-    //             email: Joi.string().min(1).max(15)
-    //         })
-    //     }
-    // },
 };
 const update = {
     method: "POST",
@@ -129,9 +133,12 @@ const update = {
             const query = "UPDATE contact SET " + params.field + "='" + params.value + "' WHERE id='" + params.id + "';";
             const res = await client.query(query);
 
+            // Get updated contact details
+            const updatedContactDetails = await (client.query("SELECT * FROM contact WHERE id='" + params.id + "'"));
             return {
                 message: "Record updated",
-                success: true
+                success: true,
+                contact: updatedContactDetails
             };
 
         } catch (error) {
@@ -144,15 +151,6 @@ const update = {
 
 
     },
-    // options: {
-    //     validate: {
-    //         payload: Joi.object({
-    //             name: Joi.string().min(1).max(15),
-    //             lname: Joi.string().min(1).max(15),
-    //             email: Joi.string().min(1).max(15)
-    //         })
-    //     }
-    // },
 };
 const contact = {
     method: "GET",
@@ -177,17 +175,32 @@ const search = {
     method: "GET",
     path: "/search",
     handler: async (request, h) => {
+
         const params = request.query;
 
-        const query = "SELECT * FROM contact WHERE lname LIKE '" + params.key + "%';";
+        const searchParameters = ['fname', 'lastname', 'group'];
+
+        if (!params.fname && !params.lname && !params.group) return {
+            status: 'OK',
+            message: 'query requires first, lastname or group'
+        }
+
+        let query = null;
+        if (params.fname) {
+            query = "SELECT * FROM contact WHERE fname LIKE '" + params.fname + "%';";
+        } else if (params.fname) {
+            query = "SELECT * FROM contact WHERE lname LIKE '" + params.lname + "%';";
+        } else {
+            query = "SELECT * FROM contact WHERE contact_group = '" + params.group + "';";
+        }
+
         const res = await client.query(query);
-
-        console.log(res);
-
+        console.log(query)
         if (res.rowCount < 1) {
             return {
                 message: 'No records found',
-                success: false
+                success: false,
+                rowCount: res.rowCount
             }
         }
         return res.rows;
@@ -204,7 +217,8 @@ const remove = {
             const res = await client.query(query);
             return {
                 message: "Record deleted",
-                success: true
+                success: true,
+                rowCount: res.rowCount
             };
 
         } catch (error) {
