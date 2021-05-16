@@ -138,7 +138,7 @@ const update = {
             return {
                 message: "Record updated",
                 success: true,
-                contact: updatedContactDetails
+                contact: updatedContactDetails.rows
             };
 
         } catch (error) {
