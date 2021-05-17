@@ -77,9 +77,8 @@ const all = {
     method: "GET",
     path: "/all",
     handler: async (request, h) => {
+
         const res = await client.query('SELECT * FROM contact');
-
-
         if (res.length <= 0) {
             const responseObject = {
                 status: 401,
@@ -135,6 +134,12 @@ const update = {
 
             // Get updated contact details
             const updatedContactDetails = await (client.query("SELECT * FROM contact WHERE id='" + params.id + "'"));
+            if (res.rowCount <= 0) {
+                return {
+                    message: "Record not found",
+                    success: false
+                };
+            }
             return {
                 message: "Record updated",
                 success: true,
@@ -156,17 +161,27 @@ const contact = {
     method: "GET",
     path: "/contact",
     handler: async (request, h) => {
-        const params = request.query;
-        const query = "SELECT * FROM contact WHERE id='" + params.id + "'";
-        const res = await client.query(query);
-        if (res.rowCount < 1) {
+        try {
+            const params = request.query;
+            const query = "SELECT * FROM contact WHERE id='" + params.id + "'";
+            const res = await client.query(query);
+
+            if (res.rowCount < 1) {
+                return {
+                    message: 'No records found',
+                    success: false
+                }
+            }
+
+            return res.rows;
+        } catch {
+
             return {
-                message: 'No records found',
+                message: 'Incorrect query',
                 success: false
             }
-        }
 
-        return res.rows;
+        }
     },
 
 };
@@ -185,25 +200,34 @@ const search = {
             message: 'query requires first, lastname or group'
         }
 
-        let query = null;
-        if (params.fname) {
-            query = "SELECT * FROM contact WHERE fname LIKE '" + params.fname + "%';";
-        } else if (params.fname) {
-            query = "SELECT * FROM contact WHERE lname LIKE '" + params.lname + "%';";
-        } else {
-            query = "SELECT * FROM contact WHERE contact_group = '" + params.group + "';";
-        }
+        try {
 
-        const res = await client.query(query);
-        console.log(query)
-        if (res.rowCount < 1) {
+            let query = null;
+            if (params.fname) {
+                query = "SELECT * FROM contact WHERE fname LIKE '" + params.fname + "%';";
+            } else if (params.lname) {
+                query = "SELECT * FROM contact WHERE lname LIKE '" + params.lname + "%';";
+            } else if (params.group) {
+                query = "SELECT * FROM contact WHERE contact_group = '" + params.group + "';";
+            }
+
+            const res = await client.query(query);
+            if (res.rowCount < 1) {
+                return {
+                    message: 'No records found',
+                    success: false,
+                    rowCount: res.rowCount
+                }
+            }
+            return res.rows;
+        } catch (error) {
             return {
-                message: 'No records found',
+                message: 'Incorrect query',
                 success: false,
-                rowCount: res.rowCount
+                rowCount: 0
             }
         }
-        return res.rows;
+
     }
 }
 const remove = {
