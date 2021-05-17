@@ -26,7 +26,7 @@ const init = async () => {
         const res = await client.query('SELECT * FROM contact');
 
         // console.log("creating table...");
-        const table = await client.query(`CREATE TABLE IF NOT EXISTS contacts (
+        const table = await client.query(`CREATE TABLE IF NOT EXISTS contact (
             id SERIAL PRIMARY KEY,
             fname char(50) NOT NULL,
             lname char(50) NOT NULL,
